@@ -2,7 +2,7 @@
 
 ## 1. Goals
 
-- Satisfy assignment rubric (title, abstract, year, authors, author gender, countries, references).
+- Satisfy rubric (title, abstract, year, authors, author gender, countries, references).
 - Keep the schema minimal but future-proof.
 - Separate **human-readable** columns from **technical/JSON** columns.
 - Make provenance and errors explicit for auditability.
@@ -125,7 +125,7 @@ Excel row mapping:
 
 ## 4. Rationale
 
-- **Grading:** All assignment-required fields are clearly visible and easy to inspect.
+- **Grading:** All fields are clearly visible and easy to inspect.
 - **MVP simplicity:** No extra columns beyond what we need for scoring and a small, well-justified set of technical fields.
 - **Future-proofing:** JSON columns (`authors_json`, `references_json`) and `provenance` make it straightforward to:
   - Add OpenAlex data (abstracts, affiliations),
