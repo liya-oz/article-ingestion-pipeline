@@ -198,6 +198,54 @@ df.to_excel('step1.xlsx', index=False, engine='openpyxl')
 
 ---
 
+### Crossref + OpenAlex Fallback Policy (MVP)
+
+- The pipeline uses Crossref as the primary metadata source, with OpenAlex as a secondary backup for explicit per-field fallbacks.
+- Fields that can be sourced from OpenAlex include: title, abstract, year, authors, countries, and openalex_id.
+- For each field, only one source is chosen (never mixed); the provenance dict records the source, and any issues or fallbacks are tracked in the metadata_errors column.
+- This approach ensures clear, reproducible provenance for every field and robust handling of missing or incomplete data.
+
+---
+
+#### Country Vocabulary Source
+
+For country detection, I use a standardized mapping of ISO 3166-1 alpha‑2 codes to English country names taken directly from the [`umpirsky/country-list`](https://github.com/umpirsky/country-list) repository.
+
+- It provides a dict of the form:
+
+  ```json
+  {
+    "AF": "Afghanistan",
+    "AX": "Åland Islands",
+    "AL": "Albania",
+    "DZ": "Algeria",
+    "AS": "American Samoa",
+    "AD": "Andorra",
+    "AO": "Angola",
+    ...
+    "US": "United States",
+    "UY": "Uruguay",
+    "UZ": "Uzbekistan",
+    "VU": "Vanuatu",
+    "VA": "Vatican City",
+    "VE": "Venezuela",
+    "VN": "Vietnam",
+    "WF": "Wallis & Futuna",
+    "EH": "Western Sahara",
+    "YE": "Yemen",
+    "ZM": "Zambia",
+    "ZW": "Zimbabwe"
+  }
+  ```
+
+- This mapping is used as the canonical country vocabulary for:
+  - matching country names in title/abstract text, and
+  - normalizing country codes from affiliations (e.g., OpenAlex `country_code` fields).
+
+Using this list ensures that all country names and codes are based on a well‑known, publicly available source and remain reproducible across runs.
+
+---
+
 ## 9. Reproducibility Requirements
 
 1. **Cache all API responses** with timestamp

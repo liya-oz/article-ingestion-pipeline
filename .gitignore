@@ -1,0 +1,35 @@
+# Byte-compiled / optimized / compiled Python files
+__pycache__/
+*.py[cod]
+
+# Caches and API responses
+cache/
+!cache/.gitkeep
+
+# Ignore all files in cache subfolders except .gitkeep
+cache/*/
+!cache/*/.gitkeep
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# MacOS system files
+.DS_Store
+
+# Excel and CSV outputs (optional, if not needed in repo)
+*.xlsx
+*.csv
+
+# VS Code settings
+.vscode/
+
+# Logs
+*.log
+
+# Test outputs
+*.tmp
+
+# Ignore other temp files
+*.bak
+*.swp
+*.swo
