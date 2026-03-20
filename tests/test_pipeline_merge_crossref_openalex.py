@@ -57,7 +57,7 @@ def test_merge_crossref_openalex_priority_and_fallbacks():
     # Metadata errors should include warnings from both
     assert "warning: missing_title" in merged["metadata_errors"]
     assert "warning: missing_year" in merged["metadata_errors"]
-    assert "warning: missing_abstract" in merged["metadata_errors"]
+    assert "warning: missing_abstract" not in merged["metadata_errors"]
 
 def test_merge_crossref_openalex_crossref_only():
     crossref = {

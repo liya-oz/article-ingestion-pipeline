@@ -35,6 +35,7 @@ CACHE_DIRS = [
     "cache/crossref",
     "cache/openalex",
     "cache/genderize",
+    "cache/semanticscholar"
 ]
 
 
@@ -273,6 +274,64 @@ def fetch_genderize(name: str) -> Dict:
         raise last_exc
 
     raise RuntimeError("Failed to fetch Genderize data and no cache available.")
+
+def fetch_semanticscholar(doi: str) -> Dict:
+    """Fetch Semantic Scholar metadata for a single DOI with disk caching.
+
+    - Normalizes the DOI.
+    - Derives a cache path using the SHA-256 hash of the normalized DOI:
+      cache/semanticscholar/{sha256}.json
+    - Returns immediately from cache if the file already exists.
+    - Otherwise queries the Semantic Scholar API (up to 3 attempts), saves the raw
+      JSON to cache on success, and returns the parsed dict.
+    - Raises the last exception if all retries fail and no cache is available.
+    """
+    normalized_doi = normalize_doi(doi)
+    if not normalized_doi:
+        raise ValueError("DOI is blank or invalid")
+
+    # Ensure cache directory exists
+    cache_dir = os.path.join("cache", "semanticscholar")
+    os.makedirs(cache_dir, exist_ok=True)
+
+    doi_hash = hashlib.sha256(normalized_doi.encode("utf-8")).hexdigest()
+    cache_path = os.path.join(cache_dir, f"{doi_hash}.json")
+
+    # 1) Cache hit: return immediately without a network call
+    if os.path.exists(cache_path):
+        logging.info(f"[SemanticScholar] Cache hit for DOI {normalized_doi}")
+        with open(cache_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    # 2) Cache miss: query Semantic Scholar with up to 3 attempts
+    url = f"https://api.semanticscholar.org/graph/v1/paper/DOI:{normalized_doi}?fields=title,abstract,authors,year"
+    last_exc: Optional[Exception] = None
+
+    for attempt in range(3):
+        try:
+            logging.info(f"[SemanticScholar] Fetching from API (attempt {attempt+1}) for DOI {normalized_doi}")
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data: Dict = response.json()
+
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            logging.info(f"[SemanticScholar] Cached API response for {normalized_doi}")
+
+            return data
+        except requests.RequestException as e:
+            last_exc = e
+            logging.warning(f"[SemanticScholar] API error for DOI {normalized_doi} (attempt {attempt+1}): {e}")
+            if attempt < 2:
+                time.sleep(1)
+
+    # 3) All retries failed; raise last error (no stale cache available)
+    if last_exc is not None:
+        logging.error(f"[SemanticScholar] All attempts failed for DOI {normalized_doi}")
+        raise last_exc
+
+    raise RuntimeError("Failed to fetch Semantic Scholar data and no cache available.")
+
 
 def enrich_author_genders(record: Dict, threshold: float = 0.8) -> Dict:
     """
@@ -543,15 +602,31 @@ def merge_crossref_openalex(
         title = crossref_title
         provenance_title = "crossref"
 
-    # Abstract
+    # Abstract fallback logic: Crossref -> OpenAlex -> Semantic Scholar -> fallback
     crossref_abstract = crossref_parsed.get("abstract", "")
     openalex_abstract = (openalex_parsed or {}).get("abstract", "") if openalex_parsed else ""
-    if (not crossref_abstract or len(crossref_abstract.strip()) < 200) and openalex_abstract:
+    # 1. Use Crossref if present and long enough
+    if crossref_abstract and len(crossref_abstract.strip()) >= 100:
+        abstract = crossref_abstract
+        provenance_abstract = "crossref"
+    # 2. Use OpenAlex if Crossref is missing/short and OpenAlex is present
+    elif openalex_abstract:
         abstract = openalex_abstract
         provenance_abstract = "openalex"
+    # 3. Use Semantic Scholar if both above are missing/short
     else:
-        abstract = crossref_abstract
-        provenance_abstract = "crossref" if crossref_abstract else "missing"
+        try:
+            semanticscholar_json = fetch_semanticscholar(doi)
+            semanticscholar_abstract = semanticscholar_json.get("abstract", "")
+            if semanticscholar_abstract:
+                abstract = semanticscholar_abstract
+                provenance_abstract = "semanticscholar"
+            else:
+                abstract = crossref_abstract
+                provenance_abstract = "crossref" if crossref_abstract else "missing"
+        except Exception:
+            abstract = crossref_abstract
+            provenance_abstract = "crossref" if crossref_abstract else "missing"
 
     # Year
     crossref_year = crossref_parsed.get("year", None)
@@ -605,6 +680,9 @@ def merge_crossref_openalex(
     if openalex_parsed:
         for w in openalex_parsed.get("warnings", []):
             if isinstance(w, str):
+                # Do not report missing_abstract from OpenAlex if abstract was later resolved by another source (e.g., Semantic Scholar).
+                if w == "missing_abstract" and provenance_abstract != "missing":
+                    continue
                 metadata_errors.append(f"warning: {w}")
 
     # Provenance dict
