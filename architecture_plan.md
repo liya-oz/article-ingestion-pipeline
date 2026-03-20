@@ -3,7 +3,7 @@
 ## 1. Objective
 
 **Input:** CSV with ~20 DOIs  
-**Output:** `step1.xlsx` with one row per article containing:
+**Output:** `result.xlsx` file with one row per article containing:
 
 - Article Title
 - Abstract
@@ -114,7 +114,7 @@
     ↓
 [Step 5: Detect Research Countries] → text + affiliation
     ↓
-[Step 6: Export to step1.xlsx]
+[Step 6: Export to result.xlsx]
 ```
 
 ---
@@ -184,7 +184,7 @@ def detect_countries(title, abstract, affiliations):
 
 ```python
 df = pd.DataFrame(processed_articles)
-df.to_excel('step1.xlsx', index=False, engine='openpyxl')
+df.to_excel('result.xlsx', index=False, engine='openpyxl')
 ```
 
 ---
@@ -250,7 +250,7 @@ Using this list ensures that all country names and codes are based on a well‑k
 
 1. **Cache all API responses** with timestamp
 2. **Pin dependencies** in `requirements.txt`
-3. **Single command execution:** `python pipeline.py --input dois.csv --output step1.xlsx`
+3. **Single command execution:** `python pipeline.py --input dois.csv --output result.xlsx`
 4. **Deterministic output:** Same input order preserved in Excel
 
 ---

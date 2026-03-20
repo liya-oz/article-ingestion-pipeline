@@ -46,10 +46,10 @@ MIT License
 #### Task 1: Extract References and Filter DOIs from Excel
 
 ```
-python3 step2_prepare_references.py --input step1.xlsx --allrefs cache/references/all_references.csv --doirefs cache/references/doi_references.csv
+python3 step2_prepare_references.py --input result.xlsx --allrefs cache/references/all_references.csv --doirefs cache/references/doi_references.csv
 ```
 
-- Reads the `references_list` column from `step1.xlsx`.
+- Reads the `references_list` column from `result.xlsx`.
 - Writes all reference strings to `all_references.csv`.
 - Filters and writes only DOIs (those starting with "10.") to `doi_references.csv`.
 
@@ -72,7 +72,7 @@ python3 step2_prepare_references.py --filteronly --allrefs cache/references/all_
 
 After running these commands, you will have:
 
-- `step1.xlsx` — Metadata for the 20 target articles.
+- `result.xlsx` — Metadata for the 20 target articles.
 - `cache/references/all_references.csv` — All references extracted.
 - `cache/references/doi_references.csv` — Only DOIs, ready for further steps.
 - `doi_from_references_with_metadata.xlsx` — Metadata for DOIs found in references (after enrichment step).

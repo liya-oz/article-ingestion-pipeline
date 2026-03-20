@@ -55,7 +55,7 @@ def filter_dois_from_csv(all_refs_csv, doi_refs_csv):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Extract and filter references from Excel file or filter DOIs from CSV.")
-    parser.add_argument("--input", help="Input Excel file (e.g., step1.xlsx)")
+    parser.add_argument("--input", help="Input Excel file (e.g., result.xlsx)")
     parser.add_argument("--allrefs", help="Output CSV for all references")
     parser.add_argument("--doirefs", required=True, help="Output CSV for DOI references")
     parser.add_argument("--filteronly", action="store_true", help="Only filter DOIs from all_references.csv")

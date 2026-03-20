@@ -1,12 +1,12 @@
-"""MVP pipeline: read DOI CSV and output step1.xlsx.
+"""MVP pipeline: read DOI CSV and output result.xlsx.
 
 This script reads a list of DOIs from a CSV file, queries
 public APIs (e.g., Crossref and OpenAlex), and writes a
-Graph RAG–friendly Excel file (step1.xlsx) with one row per DOI.
+Graph RAG–friendly Excel file (result.xlsx) with one row per DOI.
 
 Usage example:
-    python pipeline.py --input ./doi_list.csv \
-                       --output ./step1.xlsx
+    python pipeline.py --input ./doi_list.csv
+                       --output ./result.xlsx
 """
 
 import argparse
@@ -28,7 +28,7 @@ except Exception:  # pragma: no cover - optional dependency for dry runs
 
 # Per instructions: default input path and output name
 DEFAULT_INPUT = "./doi_list.csv"
-DEFAULT_OUTPUT = "step1.xlsx"
+DEFAULT_OUTPUT = "result.xlsx"
 
 # Per instructions: cache directories
 CACHE_DIRS = [
@@ -137,7 +137,7 @@ def fetch_crossref(doi: str) -> Dict:
 
     # 1) Cache hit: return immediately without a network call
     if os.path.exists(cache_path):
-        logging.debug("Cache hit for DOI %s (%s)", normalized_doi, cache_path)
+        logging.info(f"[Crossref] Cache hit for DOI {normalized_doi}")
         with open(cache_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
@@ -147,24 +147,25 @@ def fetch_crossref(doi: str) -> Dict:
 
     for attempt in range(3):
         try:
+            logging.info(f"[Crossref] Fetching from API (attempt {attempt+1}) for DOI {normalized_doi}")
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             data: Dict = response.json()
 
             with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            logging.debug(
-                "Cached Crossref response for %s → %s", normalized_doi, cache_path
-            )
+            logging.info(f"[Crossref] Cached API response for {normalized_doi}")
 
             return data
         except requests.RequestException as e:
             last_exc = e
+            logging.warning(f"[Crossref] API error for DOI {normalized_doi} (attempt {attempt+1}): {e}")
             if attempt < 2:
                 time.sleep(1)
 
     # 3) All retries failed; raise last error (no stale cache available)
     if last_exc is not None:
+        logging.error(f"[Crossref] All attempts failed for DOI {normalized_doi}")
         raise last_exc
 
     raise RuntimeError("Failed to fetch Crossref data and no cache available.")
@@ -192,7 +193,7 @@ def fetch_openalex(doi: str) -> Dict:
 
     # 1) Cache hit: return immediately without a network call
     if os.path.exists(cache_path):
-        logging.debug("Cache hit for DOI %s (%s)", normalized_doi, cache_path)
+        logging.info(f"[OpenAlex] Cache hit for DOI {normalized_doi}")
         with open(cache_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
@@ -202,24 +203,25 @@ def fetch_openalex(doi: str) -> Dict:
 
     for attempt in range(3):
         try:
+            logging.info(f"[OpenAlex] Fetching from API (attempt {attempt+1}) for DOI {normalized_doi}")
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             data: Dict = response.json()
 
             with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            logging.debug(
-                "Cached OpenAlex response for %s → %s", normalized_doi, cache_path
-            )
+            logging.info(f"[OpenAlex] Cached API response for {normalized_doi}")
 
             return data
         except requests.RequestException as e:
             last_exc = e
+            logging.warning(f"[OpenAlex] API error for DOI {normalized_doi} (attempt {attempt+1}): {e}")
             if attempt < 2:
                 time.sleep(1)
 
     # 3) All retries failed; raise last error (no stale cache available)
     if last_exc is not None:
+        logging.error(f"[OpenAlex] All attempts failed for DOI {normalized_doi}")
         raise last_exc
 
     raise RuntimeError("Failed to fetch OpenAlex data and no cache available.")
@@ -345,7 +347,7 @@ def write_header_excel(output_path: str) -> None:
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "step1"
+    ws.title = "result"
 
     # Write header row
     ws.append(headers)
@@ -357,7 +359,7 @@ def write_header_excel(output_path: str) -> None:
 def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="MVP pipeline: reads DOI CSV and outputs step1.xlsx"
+        description="MVP pipeline: reads DOI CSV and outputs result.xlsx"
     )
     parser.add_argument(
         "--input",
@@ -878,10 +880,13 @@ def process_all(doi_rows: List[Dict], input_errors: List[Dict]) -> List[Dict]:
     """
     result = []
     country_mapping = load_country_mapping()
+    total = len(doi_rows)
     for idx, row in enumerate(doi_rows):
         normalized = row.get("normalized")
         original = row.get("original")
+        log_prefix = f"[DOI {idx+1}/{total}]"
         if normalized is None:
+            logging.info(f"{log_prefix} Skipping invalid/blank DOI: '{original}'")
             # Handle invalid/blank DOI
             error_entry = next(
                 (err for err in input_errors if err.get("line") == idx + 1), None
@@ -910,6 +915,7 @@ def process_all(doi_rows: List[Dict], input_errors: List[Dict]) -> List[Dict]:
             row_dict = assemble_row(canonical_record, country_mapping)
             result.append(row_dict)
         else:
+            logging.info(f"{log_prefix} Processing DOI: {normalized}")
             # Handle valid DOI with Crossref and optional OpenAlex enrichment
             metadata_errors = []
             canonical_record = None
@@ -920,6 +926,7 @@ def process_all(doi_rows: List[Dict], input_errors: List[Dict]) -> List[Dict]:
                 crossref_json = fetch_crossref(normalized)
                 crossref_parsed = parse_crossref_response(crossref_json)
             except Exception as exc:
+                logging.error(f"{log_prefix} Crossref fetch/parse failed: {exc}")
                 # Fallback canonical record with error
                 metadata_errors.append(f"crossref_pipeline_failure: {str(exc)}")
                 canonical_record = {
@@ -954,11 +961,13 @@ def process_all(doi_rows: List[Dict], input_errors: List[Dict]) -> List[Dict]:
             crossref_abstract = crossref_parsed.get("abstract", "")
             if not crossref_abstract or len(crossref_abstract.strip()) < 200:
                 try:
+                    logging.info(f"{log_prefix} Fetching OpenAlex for DOI: {normalized}")
                     openalex_json = fetch_openalex(normalized)
                     openalex_parsed = parse_openalex_response(openalex_json)
                 except Exception as exc:
                     openalex_parsed = None
                     openalex_error = f"openalex_error: {str(exc)}"
+                    logging.warning(f"{log_prefix} OpenAlex fetch/parse failed: {exc}")
             else:
                 openalex_parsed = None
 
@@ -985,6 +994,7 @@ def process_all(doi_rows: List[Dict], input_errors: List[Dict]) -> List[Dict]:
                 canonical_record = detect_countries_from_record(canonical_record)
             except Exception as exc:
                 canonical_record["metadata_errors"].append(f"country_detection_error: {str(exc)}")
+                logging.warning(f"{log_prefix} Country detection failed: {exc}")
             row_dict = assemble_row(canonical_record, country_mapping)
             result.append(row_dict)
     return result
@@ -1034,7 +1044,7 @@ def run_pipeline(input_path: str, output_path: str) -> bool:
     # Write Excel file (overwrite if exists)
     wb = Workbook()
     ws = wb.active
-    ws.title = "step1"
+    ws.title = "result"
     ws.append(headers)
     for row in assembled_rows:
         ws.append([row.get(col, "") for col in headers])

@@ -1,4 +1,4 @@
-# Excel Output Schema – for `step1.xlsx` schema
+# Excel Output Schema – for `result.xlsx` schema
 
 ## 1. Goals
 
@@ -134,4 +134,4 @@ Excel row mapping:
   - And later build graph/RAG structures without changing the Excel schema.
 - **Transparency:** `metadata_errors` clearly surfaces data quality and robustness to the reviewers.
 
-This schema will directly drive the implementation of `assemble_row(record: Dict) -> Dict` and the structure of `step1.xlsx`.
+This schema will directly drive the implementation of `assemble_row(record: Dict) -> Dict` and the structure of `result.xlsx`.
