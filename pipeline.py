@@ -20,7 +20,6 @@ from typing import Optional, Iterable, List, Dict
 import requests
 
 try:
-    import openpyxl
     from openpyxl import Workbook
 except Exception:  # pragma: no cover - optional dependency for dry runs
     openpyxl = None  # type: ignore[assignment]
