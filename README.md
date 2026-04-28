@@ -1,14 +1,80 @@
-# Academic Article Metadata Pipeline
+# Research Data Pipeline
 
-Extract, enrich, and export academic article metadata using public APIs. Designed for reproducibility and robust error handling.
+An automated system for transforming fragmented scholarly metadata into a structured, analysis-ready dataset. Built on publicly available APIs, the pipeline emphasizes reproducibility, transparency, and fault-tolerant design.
 
-## Features
+At its core, this project is a research data automation pipeline: it ingests a minimal input (a list of DOIs) and produces a consistent, enriched dataset suitable for quantitative analysis and downstream computational workflows.
 
-- Fetches metadata from Crossref and OpenAlex
-- Author gender enrichment (Genderize.io)
-- Research country detection
-- Caching for reproducibility
-- Excel export with provenance tracking
+It replaces a traditionally manual, error-prone process with a deterministic and repeatable system.
+
+---
+
+The workflow begins with a simple CSV file containing DOIs. From this input, the pipeline executes a fully automated sequence:
+
+* **Metadata aggregation** from Crossref, OpenAlex, and Semantic Scholar  
+* **Field standardization** across heterogeneous sources  
+* **Data enrichment**, including probabilistic gender inference and geographic extraction  
+* **Robust handling of incomplete or inconsistent records**  
+* **Export to a structured Excel dataset with full provenance tracking**
+
+The result is a single, coherent table where each row represents an article and each column is normalized, interpretable, and ready for analysis.
+
+---
+
+## Why
+
+Scholarly metadata is widely available but poorly standardized across sources. This pipeline addresses that gap by:
+
+* minimizing dependency complexity while leveraging complementary APIs  
+* applying explicit fallback strategies across multiple sources  
+* encoding assumptions and limitations transparently  
+
+The outcome is a **practical, reproducible approach to metadata integration**, aligned with the needs of modern computational research.
+
+---
+
+## Research Applications
+
+The generated dataset enables immediate exploration of:
+
+* geographic distribution of research activity  
+* gender patterns in authorship  
+* temporal publication trends  
+* citation structures and reference networks  
+
+Because the pipeline standardizes and enriches metadata, it supports both **descriptive analysis** and **integration into larger computational frameworks**.
+
+---
+
+## Adapted for Data-Driven Research
+
+Beyond standalone analysis, the output serves as a **data ingestion layer** for:
+
+* statistical modeling and machine learning  
+* retrieval-augmented generation (RAG) systems  
+* knowledge graph construction  
+* interactive dashboards and visualization tools  
+
+---
+
+## Reproducibility and Provenance
+
+A key design principle is **reproducibility**:
+
+* all API responses are cached  
+* identical inputs yield identical outputs  
+* each field retains clear source attribution  
+
+---
+
+## Architecture
+
+**ETL pipeline:**
+
+* **Extract** → Crossref, OpenAlex, Semantic Scholar  
+* **Transform** → normalization and enrichment  
+* **Load** → Excel dataset 
+
+---
 
 ## Installation
 
